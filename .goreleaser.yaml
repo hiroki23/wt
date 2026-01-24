@@ -36,3 +36,12 @@ brews:
       name: goreleaserbot
       email: goreleaser@users.noreply.github.com
     commit_msg_template: "brew: update wt to {{ .Tag }}"
+    caveats: |
+      To enable shell integration for zsh:
+        grep -q 'wt hook zsh' ~/.zshrc || echo 'eval "$(wt hook zsh)"' >> ~/.zshrc
+
+      Optional prompt:
+        grep -q 'wt hook zsh --prompt' ~/.zshrc || echo 'eval "$(wt hook zsh --prompt)"' >> ~/.zshrc
+
+      Restart your shell or run:
+        source ~/.zshrc
