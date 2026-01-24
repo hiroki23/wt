@@ -1,0 +1,38 @@
+version: 2
+
+project_name: wt
+
+builds:
+  - id: wt
+    main: ./cmd/wt
+    binary: wt
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README*
+      - LICENSE*
+
+brews:
+  - name: wt
+    directory: Formula
+    homepage: "https://github.com/hiroki23/wt"
+    description: "Worktree helper for Git."
+    repository:
+      owner: hiroki23
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    commit_author:
+      name: goreleaserbot
+      email: goreleaser@users.noreply.github.com
+    commit_msg_template: "brew: update wt to {{ .Tag }}"
