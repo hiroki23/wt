@@ -9,11 +9,8 @@ func runHook(args []string, out io.Writer) int {
 	if len(args) < 1 || len(args) > 2 {
 		return printCommandUsage(out, "hook")
 	}
-	if args[0] != "zsh" {
-		fmt.Fprintln(out, "wt hook: unsupported shell")
-		return 2
-	}
 
+	shell := args[0]
 	withPrompt := false
 	if len(args) == 2 {
 		if args[1] != "--prompt" {
@@ -22,8 +19,28 @@ func runHook(args []string, out io.Writer) int {
 		withPrompt = true
 	}
 
-	fmt.Fprintln(out, hookZshScript(withPrompt))
-	return 0
+	switch shell {
+	case "zsh":
+		fmt.Fprintln(out, hookZshScript(withPrompt))
+		return 0
+	case "bash":
+		if withPrompt {
+			fmt.Fprintln(out, "wt hook: prompt is only supported for zsh")
+			return 2
+		}
+		fmt.Fprintln(out, hookBashScript())
+		return 0
+	case "fish":
+		if withPrompt {
+			fmt.Fprintln(out, "wt hook: prompt is only supported for zsh")
+			return 2
+		}
+		fmt.Fprintln(out, hookFishScript())
+		return 0
+	default:
+		fmt.Fprintln(out, "wt hook: unsupported shell")
+		return 2
+	}
 }
 
 func hookZshScript(withPrompt bool) string {
@@ -32,18 +49,39 @@ _wt_run() {
   command wt "$@"
 }
 
+_wt_is_cmd() {
+  case "$1" in
+    init|hook|add|co|cd|rm|list|prune|help)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+_wt_cd() {
+  local out
+  out="$(_wt_run "$@")"
+  local status="$?"
+  if [ "$status" -ne 0 ]; then
+    echo "$out"
+    return "$status"
+  fi
+  if [ -n "$out" ]; then
+    builtin cd "$out" || return $?
+  fi
+  return 0
+}
+
 wt() {
   if [ "$1" = "cd" ] || [ "$1" = "co" ]; then
-    local out
-    out="$(_wt_run "$@")"
-    if [ "$?" -ne 0 ]; then
-      echo "$out"
-      return 1
-    fi
-    if [ -n "$out" ]; then
-      builtin cd "$out" || return $?
-    fi
-    return 0
+    _wt_cd "$@"
+    return $?
+  fi
+  if [ "$#" -eq 1 ] && [ "${1#-}" = "$1" ] && ! _wt_is_cmd "$1"; then
+    _wt_cd "$@"
+    return $?
   fi
   _wt_run "$@"
 }
@@ -146,4 +184,97 @@ fi
 precmd_functions+=(_wt_update_prompt)
 `
 	return script
+}
+
+func hookBashScript() string {
+	return `# wt hook for bash
+_wt_run() {
+  command wt "$@"
+}
+
+_wt_is_cmd() {
+  case "$1" in
+    init|hook|add|co|cd|rm|list|prune|help)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+_wt_cd() {
+  local out
+  out="$(_wt_run "$@")"
+  local status="$?"
+  if [ "$status" -ne 0 ]; then
+    echo "$out"
+    return "$status"
+  fi
+  if [ -n "$out" ]; then
+    builtin cd "$out" || return $?
+  fi
+  return 0
+}
+
+wt() {
+  if [ "$1" = "cd" ] || [ "$1" = "co" ]; then
+    _wt_cd "$@"
+    return $?
+  fi
+  if [ "$#" -eq 1 ] && [ "${1#-}" = "$1" ] && ! _wt_is_cmd "$1"; then
+    _wt_cd "$@"
+    return $?
+  fi
+  _wt_run "$@"
+}
+`
+}
+
+func hookFishScript() string {
+	return `# wt hook for fish
+function _wt_run
+  command wt $argv
+end
+
+function _wt_is_cmd
+  switch $argv[1]
+    case init hook add co cd rm list prune help
+      return 0
+  end
+  return 1
+end
+
+function _wt_cd
+  set -l out (_wt_run $argv)
+  set -l code $status
+  if test $code -ne 0
+    echo $out
+    return $code
+  end
+  if test -n "$out"
+    cd "$out"; or return $status
+  end
+  return 0
+end
+
+function wt
+  if test (count $argv) -ge 1
+    set -l cmd $argv[1]
+    if test "$cmd" = "cd" -o "$cmd" = "co"
+      _wt_cd $argv
+      return $status
+    end
+    if test (count $argv) -eq 1
+      if not string match -rq '^-.*' -- $argv[1]
+        if not _wt_is_cmd $argv[1]
+          _wt_cd $argv
+          return $status
+        end
+      end
+    end
+  end
+  _wt_run $argv
+end
+`
 }

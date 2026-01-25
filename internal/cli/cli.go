@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strings"
 )
 
 type command struct {
@@ -25,6 +26,10 @@ func Run(args []string, out io.Writer, errOut io.Writer) int {
 			}
 			return cmd.run(args[1:], out)
 		}
+	}
+
+	if len(args) == 1 && !strings.HasPrefix(args[0], "-") {
+		return runCd(args, out)
 	}
 
 	fmt.Fprintf(errOut, "wt: unknown command: %s\n", args[0])

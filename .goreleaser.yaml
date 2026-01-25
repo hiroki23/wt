@@ -37,10 +37,16 @@ brews:
       email: goreleaser@users.noreply.github.com
     commit_msg_template: "brew: update wt to {{ .Tag }}"
     caveats: |
-      To enable shell integration for zsh:
+      To enable shell integration:
+        # zsh
         grep -q 'wt hook zsh' ~/.zshrc || echo 'eval "$(wt hook zsh)"' >> ~/.zshrc
+        # bash
+        grep -q 'wt hook bash' ~/.bashrc || echo 'eval "$(wt hook bash)"' >> ~/.bashrc
+        # fish
+        mkdir -p ~/.config/fish
+        grep -q 'wt hook fish' ~/.config/fish/config.fish || echo 'wt hook fish | source' >> ~/.config/fish/config.fish
 
-      Optional prompt:
+      Optional prompt (zsh only):
         grep -q 'wt hook zsh --prompt' ~/.zshrc || echo 'eval "$(wt hook zsh --prompt)"' >> ~/.zshrc
 
       Restart your shell or run:

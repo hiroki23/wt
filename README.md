@@ -11,18 +11,31 @@ Homebrew (tap):
 brew install hiroki23/tap/wt
 ```
 
-## Setup (zsh)
+## Setup (shell integration)
 
-Add this to your `.zshrc`:
+Add one of these to your shell config:
+
+zsh (`~/.zshrc`):
 
 ```
 eval "$(wt hook zsh)"
 ```
 
-This enables `wt cd` and `wt co` to change directories by running
-the `wt` binary and `cd`-ing to its output.
+bash (`~/.bashrc`):
 
-Prompt integration is opt-in:
+```
+eval "$(wt hook bash)"
+```
+
+fish (`~/.config/fish/config.fish`):
+
+```
+wt hook fish | source
+```
+
+This enables `wt cd` and `wt co` to move between worktrees.
+
+Prompt integration is zsh-only and opt-in:
 
 ```
 eval "$(wt hook zsh --prompt)"
@@ -46,12 +59,12 @@ wt cd -
   Create a worktree for the branch.
 
 - `wt co <branch>`  
-  Create the worktree (if needed) and output its path.
-  With the zsh hook, this also `cd`s to the path.
+  Create the worktree (if needed) and move to it.
 
 - `wt cd [branch|-]`  
-  Output the worktree path for the branch. No args goes to the main
-  worktree. `-` outputs `-` for `cd -`.
+  Move to the worktree for the branch. No args goes to the main
+  worktree. `-` goes back.
+  Shorthand: `wt <branch>`.
 
 - `wt rm <branch>`  
   Remove the worktree and delete the branch.
@@ -129,5 +142,5 @@ skip `--prompt`.
 
 ## Notes
 
-`wt` only changes directories when the shell hook is enabled. Without
-the hook, `wt cd` and `wt co` just print paths.
+If the shell hook is not enabled, `wt cd` and `wt co` print the target
+path instead of moving.
