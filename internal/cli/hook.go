@@ -63,10 +63,10 @@ _wt_is_cmd() {
 _wt_cd() {
   local out
   out="$(_wt_run "$@")"
-  local status="$?"
-  if [ "$status" -ne 0 ]; then
+  local exit_code="$?"
+  if [ "$exit_code" -ne 0 ]; then
     echo "$out"
-    return "$status"
+    return "$exit_code"
   fi
   if [ -n "$out" ]; then
     builtin cd "$out" || return $?
@@ -206,10 +206,10 @@ _wt_is_cmd() {
 _wt_cd() {
   local out
   out="$(_wt_run "$@")"
-  local status="$?"
-  if [ "$status" -ne 0 ]; then
+  local exit_code="$?"
+  if [ "$exit_code" -ne 0 ]; then
     echo "$out"
-    return "$status"
+    return "$exit_code"
   fi
   if [ -n "$out" ]; then
     builtin cd "$out" || return $?
