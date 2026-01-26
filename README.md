@@ -69,7 +69,7 @@ wt cd -
 
 - `wt rm <branch>`  
   Remove the worktree and delete the branch.
-  The default and current branches are protected.
+  The default and current branches are protected.  
   Alias: `wt remove <branch>`.
 
 - `wt rm --all [-f]`  

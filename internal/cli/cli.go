@@ -76,7 +76,7 @@ func commands() []command {
 			name:  "co",
 			usage: "wt co <branch>",
 			short: "create a worktree and move",
-			help:  "Create the worktree if needed, then move to it.",
+			help:  "Create the worktree if needed, then move to it.\nAlias: wt checkout <branch>.",
 			run:   runCo,
 		},
 		{
@@ -90,7 +90,7 @@ func commands() []command {
 			name:  "rm",
 			usage: "wt rm <branch> | wt rm --all [-f]",
 			short: "remove worktree and branch",
-			help:  "Remove worktrees and branches. --all requires main worktree (git root).",
+			help:  "Remove worktrees and branches. --all requires main worktree (git root).\nAlias: wt remove <branch>.",
 			run:   runRm,
 		},
 		{
