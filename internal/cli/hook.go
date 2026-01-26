@@ -69,13 +69,14 @@ _wt_cd() {
     return "$exit_code"
   fi
   local path="$out"
-  local msg=""
-  if [[ "$out" == *$'\n'* ]]; then
-    path="${out##*$'\n'}"
-    msg="${out%$'\n'*}"
-  fi
-  if [ -n "$msg" ] && [ "$msg" != "$out" ]; then
-    echo "$msg"
+  local -a lines
+  lines=("${(@f)out}")
+  if (( ${#lines[@]} > 1 )); then
+    path="${lines[-1]}"
+    local msg="${(F)lines[1,-2]}"
+    if [ -n "$msg" ]; then
+      print -r -- "$msg"
+    fi
   fi
   if [ -n "$path" ]; then
     builtin cd "$path" || return $?
