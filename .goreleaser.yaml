@@ -6,6 +6,8 @@ builds:
   - id: wt
     main: ./cmd/wt
     binary: wt
+    ldflags:
+      - -s -w -X wt/internal/cli.Version={{ .Version }}
     env:
       - CGO_ENABLED=0
     goos:

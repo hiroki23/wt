@@ -13,9 +13,14 @@ type command struct {
 	run   func(args []string, out io.Writer) int
 }
 
+var Version = "dev"
+
 func Run(args []string, out io.Writer, errOut io.Writer) int {
 	if len(args) == 0 || isHelp(args[0]) {
 		return printHelp(out)
+	}
+	if len(args) == 1 && isVersion(args[0]) {
+		return runVersion(out)
 	}
 
 	cmds := commands()
@@ -80,6 +85,11 @@ func commands() []command {
 			run:   runPrune,
 		},
 		{
+			name:  "version",
+			usage: "wt version",
+			run:   func(_ []string, out io.Writer) int { return runVersion(out) },
+		},
+		{
 			name:  "help",
 			usage: "wt help",
 			run:   runHelp,
@@ -95,6 +105,15 @@ func commands() []command {
 func isHelp(arg string) bool {
 	switch arg {
 	case "help", "-h", "--help":
+		return true
+	default:
+		return false
+	}
+}
+
+func isVersion(arg string) bool {
+	switch arg {
+	case "-v", "--version":
 		return true
 	default:
 		return false
