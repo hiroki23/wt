@@ -108,11 +108,12 @@ func commands() []command {
 		},
 		{
 			name:  "rm",
-			usage: "wt rm <branch> | wt rm --all [-f]",
+			usage: "wt rm <branch> [-f] | wt rm --all [-f]",
 			short: "remove worktree and branch",
-			help:  "Remove worktrees and branches. --all requires main worktree (git root).",
+			help:  "Remove worktrees and branches. -f forces removal and skips confirmation for --all.",
 			examples: []string{
 				"wt rm feat/one",
+				"wt rm -f feat/one",
 				"wt rm --all",
 				"wt rm --all -f",
 			},

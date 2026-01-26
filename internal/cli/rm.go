@@ -18,7 +18,7 @@ func runRm(args []string, out io.Writer) int {
 	if opts.all {
 		return runRmAll(opts.force, out)
 	}
-	return runRmBranch(opts.branch, out)
+	return runRmBranch(opts.branch, opts.force, out)
 }
 
 type rmOptions struct {
@@ -33,7 +33,7 @@ func parseRmArgs(args []string) (rmOptions, bool) {
 		switch arg {
 		case "--all":
 			opts.all = true
-		case "-f", "--force":
+		case "-f":
 			opts.force = true
 		default:
 			if strings.HasPrefix(arg, "-") {
@@ -51,13 +51,10 @@ func parseRmArgs(args []string) (rmOptions, bool) {
 	if !opts.all && opts.branch == "" {
 		return rmOptions{}, false
 	}
-	if opts.force && !opts.all {
-		return rmOptions{}, false
-	}
 	return opts, true
 }
 
-func runRmBranch(branch string, out io.Writer) int {
+func runRmBranch(branch string, force bool, out io.Writer) int {
 	root, err := gitRoot()
 	if err != nil {
 		fmt.Fprintln(out, "wt rm: failed to determine git root")
@@ -99,8 +96,12 @@ func runRmBranch(branch string, out io.Writer) int {
 		return 0
 	}
 
-	if err := gitWorktreeRemove(root, path); err != nil {
-		fmt.Fprintln(out, "wt rm: failed to remove worktree")
+	if err := gitWorktreeRemove(root, path, force); err != nil {
+		if hint := worktreeRemoveHint(root, path); hint != "" {
+			fmt.Fprintf(out, "wt rm: %s\n", hint)
+		} else {
+			fmt.Fprintln(out, "wt rm: failed to remove worktree")
+		}
 		return 1
 	}
 	if err := gitBranchDelete(root, branch); err != nil {
@@ -168,8 +169,14 @@ func runRmAll(force bool, out io.Writer) int {
 	}
 
 	for _, wt := range targets {
-		if err := removeWorktreeAndBranch(root, wt); err != nil {
-			if wt.branch != "" {
+		if err := removeWorktreeAndBranch(root, wt, force); err != nil {
+			if hint := worktreeRemoveHint(root, wt.path); hint != "" {
+				if wt.branch != "" {
+					fmt.Fprintf(out, "wt rm: failed to remove %s: %s\n", wt.branch, hint)
+				} else {
+					fmt.Fprintf(out, "wt rm: failed to remove %s: %s\n", wt.path, hint)
+				}
+			} else if wt.branch != "" {
 				fmt.Fprintf(out, "wt rm: failed to remove %s\n", wt.branch)
 			} else {
 				fmt.Fprintf(out, "wt rm: failed to remove %s\n", wt.path)
@@ -213,8 +220,8 @@ func confirmRmAll(in io.Reader, out io.Writer, count int) bool {
 	return answer == "y" || answer == "yes"
 }
 
-func removeWorktreeAndBranch(root string, wt worktreeEntry) error {
-	if err := gitWorktreeRemove(root, wt.path); err != nil {
+func removeWorktreeAndBranch(root string, wt worktreeEntry, force bool) error {
+	if err := gitWorktreeRemove(root, wt.path, force); err != nil {
 		return err
 	}
 	if wt.branch == "" {
@@ -227,6 +234,94 @@ func removeWorktreeAndBranch(root string, wt worktreeEntry) error {
 		}
 	}
 	return nil
+}
+
+func worktreeRemoveHint(root string, path string) string {
+	locked, reason, err := worktreeLockInfo(root, path)
+	if err == nil && locked {
+		if reason != "" {
+			return fmt.Sprintf("worktree is locked (%s). Use git worktree unlock %s.", reason, path)
+		}
+		return fmt.Sprintf("worktree is locked. Use git worktree unlock %s.", path)
+	}
+
+	if hint := worktreeStatusHint(path); hint != "" {
+		return hint
+	}
+
+	if _, err := os.Stat(path); err != nil && os.IsNotExist(err) {
+		return "worktree path is missing. Run git worktree prune."
+	}
+
+	return ""
+}
+
+func worktreeStatusHint(path string) string {
+	cmd := exec.Command("git", "status", "--porcelain")
+	cmd.Dir = path
+	output, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	if len(lines) == 0 || (len(lines) == 1 && lines[0] == "") {
+		return ""
+	}
+
+	var sample string
+	hasUntracked := false
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		if strings.HasPrefix(line, "??") && !hasUntracked {
+			hasUntracked = true
+			sample = strings.TrimSpace(line[2:])
+		}
+		if sample == "" {
+			sample = strings.TrimSpace(line[2:])
+		}
+	}
+
+	if hasUntracked {
+		if sample == "" {
+			sample = "files"
+		}
+		return fmt.Sprintf("worktree has untracked files (e.g. %s). Use -f to remove or clean.", sample)
+	}
+	if sample == "" {
+		return "worktree has local changes. Use -f to remove."
+	}
+	return fmt.Sprintf("worktree has local changes (e.g. %s). Use -f to remove.", sample)
+}
+
+func worktreeLockInfo(root string, path string) (bool, string, error) {
+	cmd := exec.Command("git", "worktree", "list", "--porcelain")
+	cmd.Dir = root
+	output, err := cmd.Output()
+	if err != nil {
+		return false, "", err
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	match := false
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			match = false
+			continue
+		}
+		if strings.HasPrefix(line, "worktree ") {
+			current := strings.TrimSpace(strings.TrimPrefix(line, "worktree "))
+			match = samePath(current, path) || filepath.Clean(current) == filepath.Clean(path)
+			continue
+		}
+		if match && strings.HasPrefix(line, "locked") {
+			reason := strings.TrimSpace(strings.TrimPrefix(line, "locked"))
+			return true, reason, nil
+		}
+	}
+	return false, "", nil
 }
 
 func gitBranchDelete(root string, branch string) error {

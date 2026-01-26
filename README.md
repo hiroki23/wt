@@ -67,14 +67,14 @@ wt cd -
   worktree (git root). `-` goes back.
   Shorthand: `wt <branch>`.
 
-- `wt rm <branch>`  
+- `wt rm <branch> [-f]`  
   Remove the worktree and delete the branch.
-  The default and current branches are protected.  
+  The default and current branches are protected. Use `-f` to force removal.  
   Alias: `wt remove <branch>`.
 
 - `wt rm --all [-f]`  
   Remove all non-main worktrees (and their branches).  
-  This must be run from the main worktree (git root). Use `-f` to skip confirmation.
+  This must be run from the main worktree (git root). Use `-f` to force removal and skip confirmation.
 
 - `wt list`  
   List worktrees.

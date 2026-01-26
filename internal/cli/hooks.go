@@ -18,17 +18,17 @@ func runPostCreateHooks(root string, worktreePath string) error {
 	}
 	for _, item := range cfg.copy {
 		if err := copyHookPath(root, worktreePath, item); err != nil {
-			return err
+			return fmt.Errorf("copy %s: %w", item, err)
 		}
 	}
 	for _, item := range cfg.symlink {
 		if err := symlinkHookPath(root, worktreePath, item); err != nil {
-			return err
+			return fmt.Errorf("symlink %s: %w", item, err)
 		}
 	}
 	for _, cmd := range cfg.run {
 		if err := runHookCommand(worktreePath, cmd); err != nil {
-			return err
+			return fmt.Errorf("run %q: %w", cmd, err)
 		}
 	}
 	return nil

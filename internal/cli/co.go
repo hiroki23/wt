@@ -60,7 +60,7 @@ func runCo(args []string, out io.Writer) int {
 	}
 
 	if err := runPostCreateHooks(root, worktreePath); err != nil {
-		fmt.Fprintln(out, "wt co: failed to run hooks")
+		fmt.Fprintf(out, "wt co: failed to run hooks: %v\n", err)
 		return 1
 	}
 

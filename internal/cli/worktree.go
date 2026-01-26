@@ -80,8 +80,13 @@ func gitWorktreeAdd(root string, path string, branch string, status branchStatus
 	return cmd.Run()
 }
 
-func gitWorktreeRemove(root string, path string) error {
-	cmd := exec.Command("git", "worktree", "remove", path)
+func gitWorktreeRemove(root string, path string, force bool) error {
+	args := []string{"worktree", "remove"}
+	if force {
+		args = append(args, "-f")
+	}
+	args = append(args, path)
+	cmd := exec.Command("git", args...)
 	cmd.Dir = root
 	return cmd.Run()
 }
