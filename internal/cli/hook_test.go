@@ -162,6 +162,49 @@ exit 1
 	}
 }
 
+func TestHookZshCdHelpDoesNotCd(t *testing.T) {
+	if _, err := exec.LookPath("zsh"); err != nil {
+		t.Skip("zsh not found in PATH")
+	}
+
+	dir := t.TempDir()
+
+	hookPath := filepath.Join(dir, "hook.zsh")
+	if err := os.WriteFile(hookPath, []byte(hookZshScript(false)), 0o644); err != nil {
+		t.Fatalf("write hook failed: %v", err)
+	}
+
+	wtPath := filepath.Join(dir, "wt")
+	wtScript := `#!/bin/sh
+if [ "$1" = "cd" ]; then
+  printf '%s\n' "Usage: wt cd [branch|-]"
+  exit 0
+fi
+exit 1
+`
+	if err := os.WriteFile(wtPath, []byte(wtScript), 0o755); err != nil {
+		t.Fatalf("write wt failed: %v", err)
+	}
+
+	script := fmt.Sprintf("PATH=%s:$PATH; cd %s; source %s; wt cd -h; pwd", shellQuote(dir), shellQuote(dir), shellQuote(hookPath))
+	cmd := exec.Command("zsh", "-c", script)
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("zsh failed: %v: %s", err, string(output))
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	if len(lines) < 2 {
+		t.Fatalf("expected output lines, got %q", string(output))
+	}
+	if lines[0] != "Usage: wt cd [branch|-]" {
+		t.Fatalf("unexpected help output: %q", lines[0])
+	}
+	if lines[len(lines)-1] != dir {
+		t.Fatalf("expected pwd %q, got %q", dir, lines[len(lines)-1])
+	}
+}
+
 func shellQuote(value string) string {
 	return strconv.Quote(value)
 }

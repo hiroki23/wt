@@ -51,7 +51,7 @@ _wt_run() {
 
 _wt_is_cmd() {
   case "$1" in
-    init|hook|add|co|cd|rm|list|prune|help)
+    init|hook|add|co|cd|rm|list|prune|help|version)
       return 0
       ;;
     *)
@@ -68,19 +68,25 @@ _wt_cd() {
     echo "$out"
     return "$exit_code"
   fi
+  if [ -z "$out" ]; then
+    return 0
+  fi
   local path="$out"
+  local msg=""
   local -a lines
   lines=("${(@f)out}")
   if (( ${#lines[@]} > 1 )); then
     path="${lines[-1]}"
-    local msg="${(F)lines[1,-2]}"
+    msg="${(F)lines[1,-2]}"
+  fi
+  if [ "$path" = "-" ] || [ -d "$path" ]; then
     if [ -n "$msg" ]; then
       print -r -- "$msg"
     fi
-  fi
-  if [ -n "$path" ]; then
     builtin cd "$path" || return $?
+    return 0
   fi
+  print -r -- "$out"
   return 0
 }
 
@@ -204,7 +210,7 @@ _wt_run() {
 
 _wt_is_cmd() {
   case "$1" in
-    init|hook|add|co|cd|rm|list|prune|help)
+    init|hook|add|co|cd|rm|list|prune|help|version)
       return 0
       ;;
     *)
@@ -221,18 +227,29 @@ _wt_cd() {
     echo "$out"
     return "$exit_code"
   fi
+  if [ -z "$out" ]; then
+    return 0
+  fi
   local path="$out"
   local msg=""
-  if [[ "$out" == *$'\n'* ]]; then
-    path="${out##*$'\n'}"
-    msg="${out%$'\n'*}"
+  local -a lines=()
+  local line
+  while IFS= read -r line; do
+    lines+=("$line")
+  done <<< "$out"
+  if [ "${#lines[@]}" -gt 1 ]; then
+    path="${lines[${#lines[@]}-1]}"
+    msg="$(printf '%s\n' "${lines[@]:0:${#lines[@]}-1}")"
+    msg="${msg%$'\n'}"
   fi
-  if [ -n "$msg" ] && [ "$msg" != "$out" ]; then
-    echo "$msg"
-  fi
-  if [ -n "$path" ]; then
+  if [ "$path" = "-" ] || [ -d "$path" ]; then
+    if [ -n "$msg" ]; then
+      printf '%s\n' "$msg"
+    fi
     builtin cd "$path" || return $?
+    return 0
   fi
+  printf '%s\n' "$out"
   return 0
 }
 
@@ -258,7 +275,7 @@ end
 
 function _wt_is_cmd
   switch $argv[1]
-    case init hook add co cd rm list prune help
+    case init hook add co cd rm list prune help version
       return 0
   end
   return 1
@@ -268,23 +285,25 @@ function _wt_cd
   set -l out (_wt_run $argv)
   set -l code $status
   if test $code -ne 0
-    echo $out
+    printf '%s\n' $out
     return $code
   end
-  set -l path $out
-  if string match -rq '\n' -- $out
-    set -l lines (string split '\n' -- $out)
-    set path $lines[-1]
-    if test (count $lines) -gt 1
-      set -l msg (string join '\n' $lines[1..-2])
-      if test -n "$msg"
-        echo $msg
-      end
+  if test (count $out) -eq 0
+    return 0
+  end
+  set -l path $out[-1]
+  set -l msg ""
+  if test (count $out) -gt 1
+    set msg (string join '\n' $out[1..-2])
+  end
+  if test "$path" = "-" -o -d "$path"
+    if test -n "$msg"
+      echo $msg
     end
-  end
-  if test -n "$path"
     cd "$path"; or return $status
+    return 0
   end
+  printf '%s\n' (string join '\n' $out)
   return 0
 end
 
