@@ -59,20 +59,22 @@ wt cd -
   Create a worktree for the branch.
 
 - `wt co <branch>`  
-  Create the worktree (if needed) and move to it.
+  Create the worktree (if needed) and move to it.  
+  Alias: `wt checkout <branch>`.
 
 - `wt cd [branch|-]`  
   Move to the worktree for the branch. No args goes to the main
-  worktree. `-` goes back.
+  worktree (git root). `-` goes back.
   Shorthand: `wt <branch>`.
 
 - `wt rm <branch>`  
   Remove the worktree and delete the branch.
   The default and current branches are protected.
+  Alias: `wt remove <branch>`.
 
 - `wt rm --all [-f]`  
   Remove all non-main worktrees (and their branches).  
-  This must be run from the main worktree. Use `-f` to skip confirmation.
+  This must be run from the main worktree (git root). Use `-f` to skip confirmation.
 
 - `wt list`  
   List worktrees.

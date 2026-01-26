@@ -26,8 +26,13 @@ func Run(args []string, out io.Writer, errOut io.Writer) int {
 	}
 
 	cmds := commands()
+	lookup := args[0]
+	if alias, ok := aliasCommands()[lookup]; ok {
+		lookup = alias
+	}
+
 	for _, cmd := range cmds {
-		if cmd.name == args[0] {
+		if cmd.name == lookup {
 			if hasHelpFlag(args[1:]) {
 				return printCommandHelp(out, cmd.name)
 			}
@@ -78,14 +83,14 @@ func commands() []command {
 			name:  "cd",
 			usage: "wt cd [branch|-]",
 			short: "move to a worktree",
-			help:  "No args: main worktree. '-' goes back. Shorthand: wt <branch>.",
+			help:  "No args: main worktree (git root). '-' goes back. Shorthand: wt <branch>.",
 			run:   runCd,
 		},
 		{
 			name:  "rm",
 			usage: "wt rm <branch> | wt rm --all [-f]",
 			short: "remove worktree and branch",
-			help:  "Remove worktrees and branches. --all requires main worktree.",
+			help:  "Remove worktrees and branches. --all requires main worktree (git root).",
 			run:   runRm,
 		},
 		{
@@ -122,6 +127,13 @@ func commands() []command {
 		return cmds[i].name < cmds[j].name
 	})
 	return cmds
+}
+
+func aliasCommands() map[string]string {
+	return map[string]string{
+		"checkout": "co",
+		"remove":   "rm",
+	}
 }
 
 func isHelp(arg string) bool {
@@ -172,6 +184,9 @@ func printHelp(out io.Writer) int {
 }
 
 func commandByName(name string) (command, bool) {
+	if alias, ok := aliasCommands()[name]; ok {
+		name = alias
+	}
 	for _, cmd := range commands() {
 		if cmd.name == name {
 			return cmd, true

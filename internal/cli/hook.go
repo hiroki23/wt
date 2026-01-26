@@ -3,6 +3,8 @@ package cli
 import (
 	"fmt"
 	"io"
+	"sort"
+	"strings"
 )
 
 func runHook(args []string, out io.Writer) int {
@@ -51,7 +53,7 @@ _wt_run() {
 
 _wt_is_cmd() {
   case "$1" in
-    init|hook|add|co|cd|rm|list|prune|help|version)
+    __WT_CMD_PATTERN__)
       return 0
       ;;
     *)
@@ -91,10 +93,12 @@ _wt_cd() {
 }
 
 wt() {
-  if [ "$1" = "cd" ] || [ "$1" = "co" ]; then
-    _wt_cd "$@"
-    return $?
-  fi
+  case "$1" in
+    __WT_CD_PATTERN__)
+      _wt_cd "$@"
+      return $?
+      ;;
+  esac
   if [ "$#" -eq 1 ] && [ "${1#-}" = "$1" ] && ! _wt_is_cmd "$1"; then
     _wt_cd "$@"
     return $?
@@ -103,7 +107,7 @@ wt() {
 }
 `
 	if !withPrompt {
-		return script
+		return applyHookCmdList(script)
 	}
 
 	script += `
@@ -199,18 +203,18 @@ fi
 
 precmd_functions+=(_wt_update_prompt)
 `
-	return script
+	return applyHookCmdList(script)
 }
 
 func hookBashScript() string {
-	return `# wt hook for bash
+	script := `# wt hook for bash
 _wt_run() {
   command wt "$@"
 }
 
 _wt_is_cmd() {
   case "$1" in
-    init|hook|add|co|cd|rm|list|prune|help|version)
+    __WT_CMD_PATTERN__)
       return 0
       ;;
     *)
@@ -254,10 +258,12 @@ _wt_cd() {
 }
 
 wt() {
-  if [ "$1" = "cd" ] || [ "$1" = "co" ]; then
-    _wt_cd "$@"
-    return $?
-  fi
+  case "$1" in
+    __WT_CD_PATTERN__)
+      _wt_cd "$@"
+      return $?
+      ;;
+  esac
   if [ "$#" -eq 1 ] && [ "${1#-}" = "$1" ] && ! _wt_is_cmd "$1"; then
     _wt_cd "$@"
     return $?
@@ -265,17 +271,18 @@ wt() {
   _wt_run "$@"
 }
 `
+	return applyHookCmdList(script)
 }
 
 func hookFishScript() string {
-	return `# wt hook for fish
+	script := `# wt hook for fish
 function _wt_run
   command wt $argv
 end
 
 function _wt_is_cmd
   switch $argv[1]
-    case init hook add co cd rm list prune help version
+    case __WT_CMD_LIST__
       return 0
   end
   return 1
@@ -310,9 +317,10 @@ end
 function wt
   if test (count $argv) -ge 1
     set -l cmd $argv[1]
-    if test "$cmd" = "cd" -o "$cmd" = "co"
-      _wt_cd $argv
-      return $status
+    switch $cmd
+      case __WT_CD_LIST__
+        _wt_cd $argv
+        return $status
     end
     if test (count $argv) -eq 1
       if not string match -rq '^-.*' -- $argv[1]
@@ -326,4 +334,68 @@ function wt
   _wt_run $argv
 end
 `
+	return applyHookCmdList(script)
+}
+
+func applyHookCmdList(script string) string {
+	replacements := map[string]string{
+		"__WT_CMD_PATTERN__": hookCmdPattern(),
+		"__WT_CMD_LIST__":    hookCmdList(),
+		"__WT_CD_PATTERN__":  hookCdPattern(),
+		"__WT_CD_LIST__":     hookCdList(),
+	}
+	for from, to := range replacements {
+		script = strings.ReplaceAll(script, from, to)
+	}
+	return script
+}
+
+func hookCmdPattern() string {
+	return strings.Join(hookCommandNames(), "|")
+}
+
+func hookCmdList() string {
+	return strings.Join(hookCommandNames(), " ")
+}
+
+func hookCdPattern() string {
+	return strings.Join(hookCdNames(), "|")
+}
+
+func hookCdList() string {
+	return strings.Join(hookCdNames(), " ")
+}
+
+func hookCommandNames() []string {
+	set := make(map[string]struct{})
+	for _, cmd := range commands() {
+		set[cmd.name] = struct{}{}
+	}
+	for alias := range aliasCommands() {
+		set[alias] = struct{}{}
+	}
+	names := make([]string, 0, len(set))
+	for name := range set {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+func hookCdNames() []string {
+	set := map[string]struct{}{
+		"cd": {},
+		"co": {},
+	}
+	for alias, target := range aliasCommands() {
+		if target == "co" {
+			set[alias] = struct{}{}
+		}
+	}
+	names := make([]string, 0, len(set))
+	for name := range set {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }
