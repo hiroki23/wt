@@ -8,11 +8,12 @@ import (
 )
 
 type command struct {
-	name  string
-	usage string
-	short string
-	help  string
-	run   func(args []string, out io.Writer) int
+	name     string
+	usage    string
+	short    string
+	help     string
+	examples []string
+	run      func(args []string, out io.Writer) int
 }
 
 var Version = "dev"
@@ -56,6 +57,10 @@ func commands() []command {
 			usage: "wt init [-g]",
 			short: "create .wt.yaml (local or global)",
 			help:  "Create .wt.yaml in the repo or HOME (-g).",
+			examples: []string{
+				"wt init",
+				"wt init -g",
+			},
 			run:   runInit,
 		},
 		{
@@ -63,6 +68,10 @@ func commands() []command {
 			usage: "wt hook <shell> [--prompt]",
 			short: "print shell integration script",
 			help:  "Supported shells: zsh, bash, fish. Prompt is zsh-only.",
+			examples: []string{
+				`eval "$(wt hook zsh)"`,
+				"wt hook zsh --prompt",
+			},
 			run:   runHook,
 		},
 		{
@@ -70,13 +79,19 @@ func commands() []command {
 			usage: "wt add <branch>",
 			short: "create a worktree for a branch",
 			help:  "Create a worktree (and branch if needed).",
+			examples: []string{
+				"wt add feat/one",
+			},
 			run:   runAdd,
 		},
 		{
 			name:  "co",
 			usage: "wt co <branch>",
 			short: "create a worktree and move",
-			help:  "Create the worktree if needed, then move to it.\nAlias: wt checkout <branch>.",
+			help:  "Create the worktree if needed, then move to it.",
+			examples: []string{
+				"wt co feat/one",
+			},
 			run:   runCo,
 		},
 		{
@@ -84,13 +99,23 @@ func commands() []command {
 			usage: "wt cd [branch|-]",
 			short: "move to a worktree",
 			help:  "No args: main worktree (git root). '-' goes back. Shorthand: wt <branch>.",
+			examples: []string{
+				"wt cd feat/one",
+				"wt cd -",
+				"wt cd",
+			},
 			run:   runCd,
 		},
 		{
 			name:  "rm",
 			usage: "wt rm <branch> | wt rm --all [-f]",
 			short: "remove worktree and branch",
-			help:  "Remove worktrees and branches. --all requires main worktree (git root).\nAlias: wt remove <branch>.",
+			help:  "Remove worktrees and branches. --all requires main worktree (git root).",
+			examples: []string{
+				"wt rm feat/one",
+				"wt rm --all",
+				"wt rm --all -f",
+			},
 			run:   runRm,
 		},
 		{
@@ -98,6 +123,9 @@ func commands() []command {
 			usage: "wt list",
 			short: "list worktrees",
 			help:  "List existing worktrees.",
+			examples: []string{
+				"wt list",
+			},
 			run:   runList,
 		},
 		{
@@ -105,6 +133,9 @@ func commands() []command {
 			usage: "wt prune",
 			short: "prune stale worktrees",
 			help:  "Remove stale worktree entries.",
+			examples: []string{
+				"wt prune",
+			},
 			run:   runPrune,
 		},
 		{
@@ -112,6 +143,10 @@ func commands() []command {
 			usage: "wt version",
 			short: "show version",
 			help:  "Print version number.",
+			examples: []string{
+				"wt version",
+				"wt -v",
+			},
 			run:   func(_ []string, out io.Writer) int { return runVersion(out) },
 		},
 		{
@@ -119,6 +154,10 @@ func commands() []command {
 			usage: "wt help [command]",
 			short: "show help",
 			help:  "Show help for commands.",
+			examples: []string{
+				"wt help",
+				"wt help add",
+			},
 			run:   runHelp,
 		},
 	}
@@ -170,8 +209,17 @@ func printHelp(out io.Writer) int {
 	fmt.Fprintln(out, "  wt <command> [args]")
 	fmt.Fprintln(out, "")
 	fmt.Fprintln(out, "Commands:")
-	for _, cmd := range commands() {
-		fmt.Fprintf(out, "  %-8s %s\n", cmd.name, cmd.short)
+	cmds := commands()
+	displayNames := make([]string, len(cmds))
+	maxLen := 0
+	for i, cmd := range cmds {
+		displayNames[i] = commandDisplayName(cmd.name)
+		if len(displayNames[i]) > maxLen {
+			maxLen = len(displayNames[i])
+		}
+	}
+	for i, cmd := range cmds {
+		fmt.Fprintf(out, "  %-*s %s\n", maxLen, displayNames[i], cmd.short)
 	}
 	fmt.Fprintln(out, "")
 	fmt.Fprintln(out, "Shortcuts:")
@@ -180,6 +228,12 @@ func printHelp(out io.Writer) int {
 	fmt.Fprintln(out, "Notes:")
 	fmt.Fprintln(out, "  cd/co move only when shell hook is enabled")
 	fmt.Fprintln(out, "  prompt integration is zsh-only")
+	fmt.Fprintln(out, "")
+	fmt.Fprintln(out, "Examples:")
+	fmt.Fprintln(out, "  wt init")
+	fmt.Fprintln(out, "  wt add feat/one")
+	fmt.Fprintln(out, "  wt co feat/one")
+	fmt.Fprintln(out, "  wt cd -")
 	return 0
 }
 
@@ -215,8 +269,67 @@ func printCommandHelp(out io.Writer, name string) int {
 		return 0
 	}
 	fmt.Fprint(out, commandUsage(name))
+	if aliasLine := commandAliasLine(cmd); aliasLine != "" {
+		fmt.Fprintln(out, aliasLine)
+	}
 	if cmd.help != "" {
-		fmt.Fprintln(out, cmd.help)
+		fmt.Fprintln(out, "")
+		writeIndentedLines(out, cmd.help)
+	}
+	if len(cmd.examples) > 0 {
+		fmt.Fprintln(out, "")
+		fmt.Fprintln(out, "Examples:")
+		for _, example := range cmd.examples {
+			fmt.Fprintf(out, "  %s\n", example)
+		}
 	}
 	return 0
+}
+
+func commandDisplayName(name string) string {
+	aliases := aliasesForCommand(name)
+	if len(aliases) == 0 {
+		return name
+	}
+	parts := make([]string, 0, 1+len(aliases))
+	parts = append(parts, name)
+	parts = append(parts, aliases...)
+	return strings.Join(parts, ", ")
+}
+
+func aliasesForCommand(name string) []string {
+	var aliases []string
+	for alias, cmd := range aliasCommands() {
+		if cmd == name {
+			aliases = append(aliases, alias)
+		}
+	}
+	sort.Strings(aliases)
+	return aliases
+}
+
+func commandAliasLine(cmd command) string {
+	aliases := aliasesForCommand(cmd.name)
+	if len(aliases) == 0 {
+		return ""
+	}
+	usages := make([]string, 0, len(aliases))
+	for _, alias := range aliases {
+		usages = append(usages, aliasUsage(cmd.usage, cmd.name, alias))
+	}
+	if len(usages) == 1 {
+		return fmt.Sprintf("Alias: %s", usages[0])
+	}
+	return fmt.Sprintf("Aliases: %s", strings.Join(usages, ", "))
+}
+
+func aliasUsage(usage string, name string, alias string) string {
+	return strings.ReplaceAll(usage, "wt "+name, "wt "+alias)
+}
+
+func writeIndentedLines(out io.Writer, text string) {
+	lines := strings.Split(text, "\n")
+	for _, line := range lines {
+		fmt.Fprintf(out, "  %s\n", line)
+	}
 }

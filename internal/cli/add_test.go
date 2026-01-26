@@ -326,7 +326,7 @@ func TestRunAddHelpShowsUsage(t *testing.T) {
 	if got := errOut.String(); got != "" {
 		t.Fatalf("expected no stderr output, got %q", got)
 	}
-	if got := out.String(); got != "Usage: wt add <branch>\nCreate a worktree (and branch if needed).\n" {
+	if got := out.String(); got != "Usage: wt add <branch>\n\n  Create a worktree (and branch if needed).\n\nExamples:\n  wt add feat/one\n" {
 		t.Fatalf("unexpected stdout: %q", got)
 	}
 }
