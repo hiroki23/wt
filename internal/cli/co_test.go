@@ -50,7 +50,8 @@ func TestRunCoCreatesWorktreeAndOutputsPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected path failed: %v", err)
 	}
-	got := strings.TrimSpace(out.String())
+	lines := strings.Split(strings.TrimRight(out.String(), "\n"), "\n")
+	got := strings.TrimSpace(lines[len(lines)-1])
 	gotNorm, err := normalizePath(got)
 	if err != nil {
 		t.Fatalf("normalize output failed: %v", err)
@@ -64,6 +65,9 @@ func TestRunCoCreatesWorktreeAndOutputsPath(t *testing.T) {
 	}
 	if _, err := os.Stat(expectedPath); err != nil {
 		t.Fatalf("expected worktree to exist: %v", err)
+	}
+	if !strings.Contains(out.String(), "wt co: created worktree "+expectedPath) {
+		t.Fatalf("expected create message, got %q", out.String())
 	}
 }
 
@@ -119,7 +123,8 @@ func TestRunCoFromWorktreeUsesMainBaseDir(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected path failed: %v", err)
 	}
-	got := strings.TrimSpace(out.String())
+	lines := strings.Split(strings.TrimRight(out.String(), "\n"), "\n")
+	got := strings.TrimSpace(lines[len(lines)-1])
 	gotNorm, err := normalizePath(got)
 	if err != nil {
 		t.Fatalf("normalize output failed: %v", err)
@@ -133,5 +138,8 @@ func TestRunCoFromWorktreeUsesMainBaseDir(t *testing.T) {
 	}
 	if _, err := os.Stat(expectedPath); err != nil {
 		t.Fatalf("expected worktree to exist: %v", err)
+	}
+	if !strings.Contains(out.String(), "wt co: created worktree "+expectedPath) {
+		t.Fatalf("expected create message, got %q", out.String())
 	}
 }

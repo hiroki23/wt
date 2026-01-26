@@ -68,8 +68,17 @@ _wt_cd() {
     echo "$out"
     return "$exit_code"
   fi
-  if [ -n "$out" ]; then
-    builtin cd "$out" || return $?
+  local path="$out"
+  local msg=""
+  if [[ "$out" == *$'\n'* ]]; then
+    path="${out##*$'\n'}"
+    msg="${out%$'\n'*}"
+  fi
+  if [ -n "$msg" ] && [ "$msg" != "$out" ]; then
+    echo "$msg"
+  fi
+  if [ -n "$path" ]; then
+    builtin cd "$path" || return $?
   fi
   return 0
 }
@@ -211,8 +220,17 @@ _wt_cd() {
     echo "$out"
     return "$exit_code"
   fi
-  if [ -n "$out" ]; then
-    builtin cd "$out" || return $?
+  local path="$out"
+  local msg=""
+  if [[ "$out" == *$'\n'* ]]; then
+    path="${out##*$'\n'}"
+    msg="${out%$'\n'*}"
+  fi
+  if [ -n "$msg" ] && [ "$msg" != "$out" ]; then
+    echo "$msg"
+  fi
+  if [ -n "$path" ]; then
+    builtin cd "$path" || return $?
   fi
   return 0
 }
@@ -252,8 +270,19 @@ function _wt_cd
     echo $out
     return $code
   end
-  if test -n "$out"
-    cd "$out"; or return $status
+  set -l path $out
+  if string match -rq '\n' -- $out
+    set -l lines (string split '\n' -- $out)
+    set path $lines[-1]
+    if test (count $lines) -gt 1
+      set -l msg (string join '\n' $lines[1..-2])
+      if test -n "$msg"
+        echo $msg
+      end
+    end
+  end
+  if test -n "$path"
+    cd "$path"; or return $status
   end
   return 0
 end

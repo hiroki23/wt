@@ -64,6 +64,11 @@ func runCo(args []string, out io.Writer) int {
 		return 1
 	}
 
+	message := fmt.Sprintf("wt co: created worktree %s", worktreePath)
+	if !status.local {
+		message += " (branch created)"
+	}
+	fmt.Fprintln(out, message)
 	fmt.Fprintln(out, worktreePath)
 	return 0
 }

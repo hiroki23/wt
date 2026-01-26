@@ -20,6 +20,14 @@ func runAdd(args []string, out io.Writer) int {
 		return 1
 	}
 
+	if path, ok, err := worktreePathByBranch(root, branch); err != nil {
+		fmt.Fprintln(out, "wt add: failed to list worktrees")
+		return 1
+	} else if ok {
+		fmt.Fprintf(out, "wt add: worktree already exists %s\n", path)
+		return 1
+	}
+
 	status, err := branchStatus(root, branch)
 	if err != nil {
 		fmt.Fprintln(out, "wt add: failed to check branch")
@@ -40,6 +48,10 @@ func runAdd(args []string, out io.Writer) int {
 		fmt.Fprintln(out, "wt add: failed to resolve worktree path")
 		return 1
 	}
+	if _, err := os.Stat(worktreePath); err == nil {
+		fmt.Fprintf(out, "wt add: worktree path already exists %s\n", worktreePath)
+		return 1
+	}
 
 	if err := os.MkdirAll(filepath.Dir(worktreePath), 0o755); err != nil {
 		fmt.Fprintln(out, "wt add: failed to prepare worktree directory")
@@ -56,9 +68,10 @@ func runAdd(args []string, out io.Writer) int {
 		return 1
 	}
 
+	message := fmt.Sprintf("wt add: created worktree %s", worktreePath)
 	if !status.local {
-		fmt.Fprintf(out, "wt add: created new branch %s\n", branch)
+		message += " (branch created)"
 	}
-	fmt.Fprintf(out, "wt add: created worktree %s\n", worktreePath)
+	fmt.Fprintln(out, message)
 	return 0
 }
