@@ -238,11 +238,11 @@ base_dir: "../worktrees/{gitroot}"
 hooks:
   post_create:
     copy:
-      - ".env"
+      - .env
     symlink:
-      - "storage"
+      - storage
     run:
-      - "touch .hooked"
+      - touch .hooked
 `
 	if err := os.WriteFile(filepath.Join(root, ".wt.yaml"), []byte(config), 0o644); err != nil {
 		t.Fatalf("write config failed: %v", err)

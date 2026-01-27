@@ -98,12 +98,12 @@ base_dir: "../worktrees/{gitroot}"
 hooks:
   post_create:
     copy:
-      - ".env"
-      - ".env.local"
+      - .env
+      - .env.local
     symlink:
-      - "storage"
+      - storage
     run:
-      - "bundle install"
+      - bundle install
 ```
 
 ### `base_dir`

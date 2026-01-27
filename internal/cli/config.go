@@ -9,7 +9,7 @@ import (
 )
 
 const defaultBaseDir = "../worktrees/{gitroot}"
-const defaultConfig = "version: 1\nbase_dir: \"" + defaultBaseDir + "\"\n\n# hooks:\n#   post_create:\n#     copy:\n#       - \".env\"\n#       - \".env.local\"\n#     symlink:\n#       - \"storage\"\n#     run:\n#       - \"bundle install\"\n"
+const defaultConfig = "version: 1\nbase_dir: \"" + defaultBaseDir + "\"\n\n# hooks:\n#   post_create:\n#     copy:\n#       - .env\n#       - .env.local\n#     symlink:\n#       - storage\n#     run:\n#       - bundle install\n"
 
 type hooks struct {
 	copy    []string
