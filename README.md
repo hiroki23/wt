@@ -44,11 +44,17 @@ eval "$(wt hook zsh --prompt)"
 ## Quick Start
 
 ```
-wt init
-wt add feat/one
-wt co feat/one
-wt cd -
+wt co feat/one      # create + move (same as: wt add feat/one; wt cd feat/one)
+wt cd -             # back to previous worktree
 ```
+
+If you want to customize base_dir or hooks, create a `.wt.yaml`:
+
+```
+wt init   # create .wt.yaml
+```
+
+See [Configuration](#configuration).
 
 ## Commands
 
