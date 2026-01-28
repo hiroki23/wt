@@ -142,6 +142,11 @@ Default format:
 If you need deeper customization, keep your own prompt functions and
 skip `--prompt`.
 
+## Inspired by
+
+- [wtp](https://github.com/satococoa/wtp)
+- [git-wt](https://github.com/k1LoW/git-wt)
+
 ## Notes
 
 If the shell hook is not enabled, `wt cd` and `wt co` print the target
