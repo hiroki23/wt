@@ -1,7 +1,6 @@
 # wt
 
-`wt` is a small Git worktree helper written in Go. It focuses on fast
-worktree creation, simple hooks, and shell integration for `cd`.
+`wt` is a small tool that makes Git worktrees simple.
 
 ## Install
 
